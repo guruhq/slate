@@ -63,7 +63,7 @@ Changes.normalizeNodeByKey = (change, key) => {
  */
 
 function normalizeNodeAndChildren(change, node, schema) {
-  if (node.object == 'text') {
+  if (node.kind == 'text') {
     normalizeNode(change, node, schema)
     return
   }
