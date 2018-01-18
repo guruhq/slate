@@ -9407,7 +9407,7 @@ Changes.normalizeNodeByKey = function (change, key) {
  */
 
 function normalizeNodeAndChildren(change, node, schema) {
-  if (node.kind == 'text') {
+  if (node.object == 'text') {
     normalizeNode(change, node, schema);
     return;
   }
@@ -9420,42 +9420,37 @@ function normalizeNodeAndChildren(change, node, schema) {
     return n.key;
   });
 
-  // While there is still a child key that hasn't been normalized yet...
+  var size = change.operations.size;
 
-  var _loop = function _loop() {
-    var size = change.operations.size;
+  var key = void 0;
 
-    var key = void 0;
+  // PERF: use a mutable set here since we'll be add to it a lot.
+  var set = new _immutable.Set();
 
-    // PERF: use a mutable set here since we'll be add to it a lot.
-    var set = new _immutable.Set().asMutable();
-
-    // Unwind the stack, normalizing every child and adding it to the set.
-    while (key = keys[0]) {
-      var child = node.getChild(key);
+  // Unwind the stack, normalizing every child and adding it to the set.
+  while (key = keys[0]) {
+    set = set.add(key);
+    keys.shift();
+    var child = node.getChild(key);
+    if (child) {
       normalizeNodeAndChildren(change, child, schema);
-      set.add(key);
-      keys.shift();
+      // PERF: Only re-find the node and re-normalize any new children if
+      // operations occured that might have changed it.
+      if (change.operations.size > size) {
+        size = change.operations.size;
+        node = refindNode(change, node);
+        // if the node is no longer in the document
+        // then break the loop, dont need to normalize
+        // it anymore
+        if (!node) break;
+
+        // Add any new children back onto the stack.
+        node.nodes.forEach(function (n) {
+          if (set.has(n.key)) return;
+          keys.unshift(n.key);
+        });
+      }
     }
-
-    // Turn the set immutable to be able to compare against it.
-    set = set.asImmutable();
-
-    // PERF: Only re-find the node and re-normalize any new children if
-    // operations occured that might have changed it.
-    if (change.operations.size > size) {
-      node = refindNode(change, node);
-
-      // Add any new children back onto the stack.
-      node.nodes.forEach(function (n) {
-        if (set.has(n.key)) return;
-        keys.unshift(n.key);
-      });
-    }
-  };
-
-  while (keys.length) {
-    _loop();
   }
 
   // Normalize the node itself if it still exists.
@@ -9463,7 +9458,6 @@ function normalizeNodeAndChildren(change, node, schema) {
     normalizeNode(change, node, schema);
   }
 }
-
 /**
  * Re-find a reference to a node that may have been modified or removed
  * entirely by a change.
