@@ -49,7 +49,10 @@ Changes.normalizeNodeByKey = (change, key) => {
   const ancestors = document.getAncestors(key)
   if (!ancestors) return
 
-  ancestors.forEach((ancestor) => {
+  ancestors.forEach(({ key, }) => {
+    const ancestor = change.value.document.getDescendant(key);
+    if (!ancestor) { return; }
+
     normalizeNode(change, ancestor, schema)
   })
 }
