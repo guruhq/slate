@@ -9393,7 +9393,14 @@ Changes.normalizeNodeByKey = function (change, key) {
   var ancestors = document.getAncestors(key);
   if (!ancestors) return;
 
-  ancestors.forEach(function (ancestor) {
+  ancestors.forEach(function (_ref) {
+    var key = _ref.key;
+
+    var ancestor = change.value.document.getNode(key);
+    if (!ancestor) {
+      return;
+    }
+
     normalizeNode(change, ancestor, schema);
   });
 };
